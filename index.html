@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bar- MZ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      color: #9ca3af;
+      margin-bottom: 1.5rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .controls input,
+    .controls select {
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: none;
+      background: #1f2937;
+      color: #e5e7eb;
+      min-width: 160px;
+    }
+
+    .controls input::placeholder {
+      color: #6b7280;
+    }
+
+    .chips-label {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-bottom: 0.25rem;
+      margin-top: 0.5rem;
+    }
+
+    .chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .chip {
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      background: #111827;
+      border: 1px solid #374151;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .chip.active {
+      background: #f97316;
+      border-color: #fb923c;
+      color: #111827;
+      font-weight: 600;
+    }
+
+    .count {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      margin-bottom: 0.5rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: radial-gradient(circle at top, #111827, #020617);
+      border-radius: 16px;
+      padding: 12px;
+      border: 1px solid #1f2937;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .image-wrapper {
+      width: 100%;
+      padding-top: 130%;
+      position: relative;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #020617;
+      border: 1px solid #111827;
+    }
+
+    .image-wrapper img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .tag {
+      font-size: 0.75rem;
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: #111827;
+      border: 1px solid #374151;
+      white-space: nowrap;
+    }
+
+    .line {
+      font-size: 0.8rem;
+      color: #d1d5db;
+    }
+
+    .muted {
+      color: #9ca3af;
+    }
+
+    .badge-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      background: rgba(15, 23, 42, 0.7);
+    }
+
+    .flavour-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .flavour-badges .badge {
+      border-color: #f59e0b;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Bar- MZ</h1>
+    <p class="subtitle">Inventaire des bouteilles – recherche, filtres par type, pays et profil aromatique.</p>
+
+    <div class="controls">
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="Rechercher (nom, distillerie, notes...)"
+      />
+      <select id="categoryFilter">
+        <option value="">Toutes les catégories</option>
+      </select>
+      <select id="countryFilter">
+        <option value="">Tous les pays (whisky)</option>
+      </select>
+      <select id="sortSelect">
+        <option value="name">Tri par nom (A–Z)</option>
+        <option value="category">Tri par catégorie</option>
+        <option value="country">Tri par pays (whisky)</option>
+        <option value="id">Tri par #</option>
+      </select>
+    </div>
+
+    <div class="chips-label">Filtrer les whiskies par goût :</div>
+    <div class="chips" id="flavourChips"></div>
+
+    <div class="count" id="countDisplay"></div>
+
+    <div class="grid" id="bottleGrid"></div>
+  </div>
+
+  <script>
+    // === 1. DONNÉES : toutes tes bouteilles avec images + détails ===
+    const bottles = [
+      {
+        id: 1,
+        name: "Bowmore 12 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Bowmore",
+        age: 12,
+        country: "Écosse",
+        region: "Islay",
+        abv: 40,
+        flavourTags: ["tourbé", "fumé", "iodé", "fruité"],
+        image: "https://static01.galaxus.com/productimages/3/2/9/9/3/7/6/0/9/1/9/5/1/4/9/5/0/98254cf2-9c7e-46eb-be22-f01c9044e98c.png_720.avif",
+        notes: "Islay doux et accessible, notes de tourbe, agrumes et miel."
+      },
+      {
+        id: 2,
+        name: "Bowmore 15 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Bowmore",
+        age: 15,
+        country: "Écosse",
+        region: "Islay",
+        abv: 43,
+        flavourTags: ["tourbé", "fumé", "fruité", "sherry"],
+        image: "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcSxKlj3_v1_E7QrrKPitAe5lldR_bmWUWxQXJ5Yls5zRDQyHtifriKS3Zh9fQQOBdFfl03QdTkIVcFoyui18B0Eg1-u-OE4fVWWH4qMNPV_Y2QkXDYhabrFXbk9Ln_3ZPpNPGQAYIM&usqp=CAc",
+        notes: "Maturation sherry, équilibre tourbe et fruits secs, caramel."
+      },
+      {
+        id: 3,
+        name: "Bowmore 18 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Bowmore",
+        age: 18,
+        country: "Écosse",
+        region: "Islay",
+        abv: null,
+        flavourTags: ["tourbé", "fumé", "fruité", "boisé"],
+        image: "https://drinkch.rokka.io/new-composition-600/o-dpr-2/63311a.jpg",
+        notes: "Islay plus mature, tourbe élégante, chocolat noir et fruits secs."
+      },
+      {
+        id: 4,
+        name: "Kilchoman Machir Bay",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Kilchoman",
+        age: null,
+        country: "Écosse",
+        region: "Islay",
+        abv: null,
+        flavourTags: ["tourbé", "fumé", "iodé", "agrumes"],
+        image: "https://www.schubiweine.ch/upload/rm/ki/lc/kilchoman-machir-bay-scotch-single-malt-whisky-a67.webp",
+        notes: "Jeune Islay très vivant, fumée, citron, vanille."
+      },
+      {
+        id: 5,
+        name: "Bunnahabhain Eirigh Na Greine",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Bunnahabhain",
+        age: null,
+        country: "Écosse",
+        region: "Islay",
+        abv: null,
+        flavourTags: ["fruité", "sherry", "épices douces"],
+        image: "https://drinkch.rokka.io/new-composition-200/e883c2.jpg",
+        notes: "Bunnahabhain non tourbé, influence vin rouge, fruits rouges et épices."
+      },
+      {
+        id: 6,
+        name: "Smokehead Rebel",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Smokehead",
+        age: null,
+        country: "Écosse",
+        region: "Islay",
+        abv: null,
+        flavourTags: ["tourbé", "fumé", "iodé", "exotique"],
+        image: "https://drinkch.rokka.io/new-composition-1200/o-dpr-2/d01a0a.jpg",
+        notes: "Tourbe intense avec un finish rhum, fumée et fruits tropicaux."
+      },
+      {
+        id: 7,
+        name: "Smokehead 15 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Smokehead",
+        age: 15,
+        country: "Écosse",
+        region: "Islay",
+        abv: null,
+        flavourTags: ["tourbé", "fumé", "boisé"],
+        image: "https://cdn.premiumgrandscrus.com/11566-large_default/smokehead-15-ans.jpg",
+        notes: "Édition limitée plus mature, tourbe profonde, fruits secs et chêne."
+      },
+      {
+        id: 8,
+        name: "Smokehead Tequila Cask",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Smokehead",
+        age: null,
+        country: "Écosse",
+        region: "Islay",
+        abv: null,
+        flavourTags: ["tourbé", "fumé", "agave", "agrumes"],
+        image: "https://www.schubiweine.ch/upload/rm/sm/ok/smokehead-tequila-cask-terminado-islay-single-malt-1.jpg?_=1673131024000",
+        notes: "Tourbe d’Islay et finish tequila, citron vert, sel, fumée."
+      },
+      {
+        id: 9,
+        name: "The Ileach Cask Strength",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Non divulguée (Islay)",
+        age: null,
+        country: "Écosse",
+        region: "Islay",
+        abv: null,
+        flavourTags: ["tourbé", "fumé", "iodé", "puissant"],
+        image: "https://drinkch.rokka.io/new-composition-600/c3a1ee.jpg",
+        notes: "Islay très puissant, cask strength, fumée de tourbe, goudron, sel."
+      },
+      {
+        id: 10,
+        name: "The Whistler Imperial Stout Cask",
+        category: "Whisky",
+        type: "Irish Whiskey",
+        distillery: "Boann",
+        age: null,
+        country: "Irlande",
+        region: null,
+        abv: null,
+        flavourTags: ["malté", "chocolat", "café"],
+        image: "https://donpedros.ch/wp-content/uploads/THE-WHISTLER-Imperial-Stout-Finish.jpg",
+        notes: "Finish imperial stout, notes de malt grillé, café et chocolat."
+      },
+      {
+        id: 11,
+        name: "The Whistler Calvados Cask",
+        category: "Whisky",
+        type: "Irish Whiskey",
+        distillery: "Boann",
+        age: null,
+        country: "Irlande",
+        region: null,
+        abv: null,
+        flavourTags: ["fruité", "pomme", "épices douces"],
+        image: "https://donpedros.ch/wp-content/uploads/THE-WHISTLER-Calvados-Cask-Finish-1.jpg",
+        notes: "Finish calvados, pomme cuite, vanille, cannelle."
+      },
+      {
+        id: 12,
+        name: "The Whistler Oloroso Cask",
+        category: "Whisky",
+        type: "Irish Whiskey",
+        distillery: "Boann",
+        age: null,
+        country: "Irlande",
+        region: null,
+        abv: null,
+        flavourTags: ["sherry", "fruité", "épices douces"],
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSt5pIyfyJFUm1C5g5kmlLbqly_VClMFJDiYA&s",
+        notes: "Finish Oloroso, fruits secs, raisin, épices."
+      },
+      {
+        id: 13,
+        name: "Glenkinchie 12 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Glenkinchie",
+        age: 12,
+        country: "Écosse",
+        region: "Lowlands",
+        abv: null,
+        flavourTags: ["léger", "floral", "céréales"],
+        image: "https://m.media-amazon.com/images/I/619afRcxd+L._AC_UF894,1000_QL80_.jpg",
+        notes: "Lowland léger, herbacé, fleurs blanches, céréales."
+      },
+      {
+        id: 14,
+        name: "Dalwhinnie 15 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Dalwhinnie",
+        age: 15,
+        country: "Écosse",
+        region: "Highlands",
+        abv: null,
+        flavourTags: ["miel", "floral", "doux"],
+        image: "https://thedrinkshop.ch/1273-medium_default/dalwhinnie-15-ans-.jpg",
+        notes: "Highland doux, miel, vanille, légère fumée de cheminée."
+      },
+      {
+        id: 15,
+        name: "Old Pulteney 12 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Pulteney",
+        age: 12,
+        country: "Écosse",
+        region: "Highlands côtiers",
+        abv: null,
+        flavourTags: ["iodé", "salin", "fruité"],
+        image: "https://megavin.b-cdn.net/media/catalog/product/cache/56356838e6e4b597abc0fc3e73c58f3f/o/l/oldp.png",
+        notes: "Whisky côtier, sel marin, citron, pomme verte."
+      },
+      {
+        id: 16,
+        name: "The Macallan 12 Double Cask",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Macallan",
+        age: 12,
+        country: "Écosse",
+        region: "Speyside",
+        abv: null,
+        flavourTags: ["sherry", "vanillé", "fruité"],
+        image: "https://www.schubiweine.ch/upload/rm/macallan-12-years-double-cask-scotch-single-malt-w.jpg?_=1673130749000",
+        notes: "Double fût sherry/americain, vanille, caramel, fruits secs."
+      },
+      {
+        id: 17,
+        name: "The Glenlivet 18 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Glenlivet",
+        age: 18,
+        country: "Écosse",
+        region: "Speyside",
+        abv: null,
+        flavourTags: ["fruité", "boisé", "épices douces"],
+        image: "https://drinkch.rokka.io/new-composition-600/o-dpr-2/46df30.jpg",
+        notes: "Speyside élégant, fruits mûrs, chêne, épices."
+      },
+      {
+        id: 18,
+        name: "Rock Island",
+        category: "Whisky",
+        type: "Blended Malt",
+        distillery: "Douglas Laing",
+        age: null,
+        country: "Écosse",
+        region: "Islands",
+        abv: null,
+        flavourTags: ["marin", "tourbé léger", "salin"],
+        image: "https://d1q9atv66skeoi.cloudfront.net/image/961033245606/image_8unjhand5d76j9di4kchcgs374/-S1920x1920-FWEBP",
+        notes: "Assemblage d’îles, sel marin, fumée légère, citron."
+      },
+      {
+        id: 19,
+        name: "Talisker Wilder Seas",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Talisker",
+        age: null,
+        country: "Écosse",
+        region: "Islands (Skye)",
+        abv: null,
+        flavourTags: ["fumé", "poivré", "marin"],
+        image: "https://drinkch.rokka.io/new-composition-600/o-dpr-2/d7c28a.jpg",
+        notes: "Talisker caritatif, poivre, fumée, embruns marins."
+      },
+      {
+        id: 20,
+        name: "Caol Ila 15 ans Unpeated",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Caol Ila",
+        age: 15,
+        country: "Écosse",
+        region: "Islay",
+        abv: null,
+        flavourTags: ["fruité", "épicé", "boisé"],
+        image: "https://m.media-amazon.com/images/I/81MNClfZ-fL.jpg",
+        notes: "Version non tourbée, fruits jaunes, épices, chêne."
+      },
+      {
+        id: 21,
+        name: "Glenfiddich IPA Experiment",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Glenfiddich",
+        age: null,
+        country: "Écosse",
+        region: "Speyside",
+        abv: null,
+        flavourTags: ["agrumes", "houblon", "fruité"],
+        image: "https://m.media-amazon.com/images/I/61yL7E9xklL._AC_UF894,1000_QL80_.jpg",
+        notes: "Finish IPA, notes de pamplemousse, malt, légère amertume."
+      },
+      {
+        id: 22,
+        name: "The Dalmore 12 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Dalmore",
+        age: 12,
+        country: "Écosse",
+        region: "Highlands",
+        abv: null,
+        flavourTags: ["orange", "chocolat", "épices douces"],
+        image: "https://www.comptoir-irlandais.com/12817/dalmore-12-ans-70cl.jpg",
+        notes: "Riche et gourmand, orange confite, chocolat, café."
+      },
+      {
+        id: 23,
+        name: "The Dalmore 15 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Dalmore",
+        age: 15,
+        country: "Écosse",
+        region: "Highlands",
+        abv: null,
+        flavourTags: ["sherry", "fruité", "boisé"],
+        image: "https://www.prestigewhisky.fr/7678-large_default/dalmore-15-ans.jpg",
+        notes: "Plus sherry, fruits rouges, épices, cacao."
+      },
+      {
+        id: 24,
+        name: "Aberlour 12 ans Double Cask",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Aberlour",
+        age: 12,
+        country: "Écosse",
+        region: "Speyside",
+        abv: null,
+        flavourTags: ["sherry", "fruité", "doux"],
+        image: "https://pro.mondrink.ch/41967-thickbox_default/single-malt-scotch-whisky-aberlour-double-cask-matured-12-ans-etui-70-cl.jpg",
+        notes: "Double fût bourbon/sherry, fruits rouges, miel, épices."
+      },
+      {
+        id: 25,
+        name: "Octomore 15.1",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Bruichladdich",
+        age: null,
+        country: "Écosse",
+        region: "Islay",
+        abv: null,
+        flavourTags: ["tourbé", "fumé", "iodé", "puissant"],
+        image: "https://drinkch.rokka.io/new-composition-600/3d584a.jpg",
+        notes: "Super heavily peated, tourbe massive, fumée, eau de mer."
+      },
+      {
+        id: 26,
+        name: "Octomore 13.1",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Bruichladdich",
+        age: null,
+        country: "Écosse",
+        region: "Islay",
+        abv: null,
+        flavourTags: ["tourbé", "fumé", "iodé", "citron"],
+        image: "https://www.granchateaux.ch/media/catalog/product/cache/413dcc74255263d80df2abd4a737fce6/o/c/octomore131.jpg",
+        notes: "Tourbe extrême mais précise, citron, céréales, fumée."
+      },
+      {
+        id: 27,
+        name: "Uberach Single Cask",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Uberach",
+        age: null,
+        country: "France",
+        region: "Alsace",
+        abv: null,
+        flavourTags: ["céréales", "épices douces", "fruité"],
+        image: "https://tresorsduchai.ch/wp-content/uploads/2024/03/uberach.jpg",
+        notes: "Whisky français artisanal, malt, fruits jaunes, épices."
+      },
+      {
+        id: 28,
+        name: "Swiss Mountain Port Cask",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Swiss Mountain",
+        age: null,
+        country: "Suisse",
+        region: "Montagne",
+        abv: null,
+        flavourTags: ["fruité", "vin doux", "boisé"],
+        image: "https://www.whisky-zigarren.ch/shop/ProdukteBilder/26288_gr.jpg",
+        notes: "Single malt suisse fini en fût de porto, fruits rouges, douceur."
+      },
+      {
+        id: 29,
+        name: "Talisker Skye",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Talisker",
+        age: null,
+        country: "Écosse",
+        region: "Islands (Skye)",
+        abv: null,
+        flavourTags: ["fumé", "poivré", "marin"],
+        image: "https://drinkch.rokka.io/new-composition-1200/b82e7b.jpg",
+        notes: "Version plus douce de Talisker, fumée légère, poivre, caramel."
+      },
+      {
+        id: 30,
+        name: "Laphroaig Select",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Laphroaig",
+        age: null,
+        country: "Écosse",
+        region: "Islay",
+        abv: null,
+        flavourTags: ["tourbé", "fumé", "médicinal", "iodé"],
+        image: "https://egbiel.ch/ShopImage/artikel/detail/18630/0/whisky-laphroaig-select.jpg",
+        notes: "Mélange de fûts Laphroaig, tourbe médicinale, vanille."
+      },
+      {
+        id: 31,
+        name: "Knockando 12 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Knockando",
+        age: 12,
+        country: "Écosse",
+        region: "Speyside",
+        abv: null,
+        flavourTags: ["fruité", "céréales", "vanillé"],
+        image: "https://thedrinkshop.ch/1328-medium_default/knockando-12-ans-quintessence.jpg",
+        notes: "Speyside classique, fruits à noyau, malt, vanille."
+      },
+      {
+        id: 32,
+        name: "Johnnie Walker Black Label",
+        category: "Whisky",
+        type: "Blended Scotch",
+        distillery: "Johnnie Walker",
+        age: 12,
+        country: "Écosse",
+        region: null,
+        abv: null,
+        flavourTags: ["fumé léger", "vanillé", "caramélisé"],
+        image: "https://i8.amplience.net/i/manor/42803001",
+        notes: "Blend iconique, fumée douce, caramel, fruits secs."
+      },
+      {
+        id: 33,
+        name: "Isle of Raasay",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Raasay",
+        age: null,
+        country: "Écosse",
+        region: "Islands",
+        abv: null,
+        flavourTags: ["tourbé léger", "fruité", "marin"],
+        image: "https://drinkch.rokka.io/new-composition-600/o-dpr-2/0ffbfa.jpg",
+        notes: "Tourbe douce, fruits rouges, sel marin."
+      },
+      {
+        id: 34,
+        name: "Ledaig 10 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Tobermory",
+        age: 10,
+        country: "Écosse",
+        region: "Islands (Mull)",
+        abv: null,
+        flavourTags: ["tourbé", "fumé", "marin"],
+        image: "https://drinkch.rokka.io/new-composition-600/o-dpr-2/92a175.jpg",
+        notes: "Tourbe plus sale, fumée, notes de port et caoutchouc."
+      },
+      {
+        id: 35,
+        name: "Arran Barrel Reserve",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Arran",
+        age: null,
+        country: "Écosse",
+        region: "Isle of Arran",
+        abv: null,
+        flavourTags: ["agrumes", "vanillé", "doux"],
+        image: "https://www.thewhiskycompany.com.au/wp-content/uploads/2020/12/the_whisky_company_isle_of_arran_10_years_old_single_malt_scotch_whisky.jpg",
+        notes: "Ex-bourbon, citron, pomme, vanille."
+      },
+      {
+        id: 36,
+        name: "Talisker 10 ans",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Talisker",
+        age: 10,
+        country: "Écosse",
+        region: "Islands (Skye)",
+        abv: null,
+        flavourTags: ["fumé", "poivré", "iodé"],
+        image: "https://drinkch.rokka.io/new-composition-1200/o-dpr-2/48bc5f.jpg",
+        notes: "Poivre typique, fumée de bois, sel marin."
+      },
+      {
+        id: 37,
+        name: "Torabhaig Allt Gleann",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Torabhaig",
+        age: null,
+        country: "Écosse",
+        region: "Islands (Skye)",
+        abv: null,
+        flavourTags: ["tourbé", "fumé", "herbacé"],
+        image: "https://www.drinkdirect.ch/media/image/40/94/47/acf70864be447586f0dea31da07f656a42941be3-TORABHAIG-Whiskey-Allt-Gleann-Single-Malt-min.png",
+        notes: "Nouvelle distillerie, tourbe fraîche, herbes, citron."
+      },
+      {
+        id: 38,
+        name: "Teeling Small Batch",
+        category: "Whisky",
+        type: "Irish Whiskey",
+        distillery: "Teeling",
+        age: null,
+        country: "Irlande",
+        region: "Dublin",
+        abv: null,
+        flavourTags: ["vanillé", "fruité", "mélasse"],
+        image: "https://www.topdrinks.be/media/catalog/product/L/_/L_06_945_00_1_d5aa.png?optimize=medium&fit=bounds&height=512&width=460&canvas=460:512",
+        notes: "Finish rhum, vanille, caramel, fruits tropicaux."
+      },
+      {
+        id: 39,
+        name: "1792 Small Batch",
+        category: "Whisky",
+        type: "Bourbon",
+        distillery: "Barton 1792",
+        age: null,
+        country: "États-Unis",
+        region: "Kentucky",
+        abv: null,
+        flavourTags: ["vanillé", "caramélisé", "épicé"],
+        image: "https://www.whiskygalore.co.nz/cdn/shop/files/1792-small-batch.jpg?v=1692060539&width=1920",
+        notes: "Bourbon riche, vanille, caramel, épices de chêne."
+      },
+      {
+        id: 40,
+        name: "Port Charlotte Heavily Peated",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Bruichladdich",
+        age: null,
+        country: "Écosse",
+        region: "Islay",
+        abv: null,
+        flavourTags: ["tourbé", "fumé", "iodé"],
+        image: "https://drinkch.rokka.io/new-composition-600/o-dpr-2/71e1cd.jpg",
+        notes: "Tourbe costaude mais moderne, cendres, agrumes, mer."
+      },
+      {
+        id: 41,
+        name: "BenRiach Peated Quarter Casks",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "BenRiach",
+        age: null,
+        country: "Écosse",
+        region: "Speyside",
+        abv: null,
+        flavourTags: ["tourbé", "fruité", "boisé"],
+        image: "https://static.benriachdistillery.com/wp-content/uploads/v2/2020/08/26142515/Benriach_Peated-Quarter-cask_transparent_3000x3000.png",
+        notes: "Tourbe et fruits du Speyside, vanille et bois."
+      },
+      {
+        id: 42,
+        name: "Talisker House Greyjoy (GOT)",
+        category: "Whisky",
+        type: "Single Malt",
+        distillery: "Talisker",
+        age: null,
+        country: "Écosse",
+        region: "Islands (Skye)",
+        abv: null,
+        flavourTags: ["fumé", "marin", "épices"],
+        image: "https://donpedros.ch/wp-content/uploads/TALISKER-Selected-Reserve-Game-of-Thrones-House-Greyjoy.jpg",
+        notes: "Édition Game of Thrones, très maritime, fumée et épices."
+      },
+      {
+        id: 43,
+        name: "Sortilège Prestige",
+        category: "Whisky",
+        type: "Whisky à l’érable",
+        distillery: "Sortilège",
+        age: null,
+        country: "Canada",
+        region: "Québec",
+        abv: null,
+        flavourTags: ["doux", "érable", "vanillé"],
+        image: "https://apalac.ch/wp-content/uploads/2017/01/Liqueur-de-whisky-canadien-7-ans-d-age-sirop-d-erable-Sortilege-prestige.webp",
+        notes: "Whisky canadien et sirop d’érable, très gourmand."
+      },
+      {
+        id: 44,
+        name: "Don Papa Gayuma",
+        category: "Rhum",
+        type: "Rhum vieilli",
+        distillery: "Don Papa",
+        age: null,
+        country: "Philippines",
+        region: "Negros",
+        abv: null,
+        flavourTags: ["vanillé", "sucré", "fumé"],
+        image: "https://drinkch.rokka.io/new-composition-1200/o-dpr-2/8b7f79.jpg",
+        notes: "Rhum doux, vanille, caramel, avec une touche fumée Islay."
+      },
+      {
+        id: 45,
+        name: "Ron Zacapa 23",
+        category: "Rhum",
+        type: "Rhum de mélasse",
+        distillery: "Zacapa",
+        age: null,
+        country: "Guatemala",
+        region: null,
+        abv: null,
+        flavourTags: ["doux", "caramélisé", "fruité"],
+        image: "https://thedrinkshop.ch/1514-thickbox_default/zacapa-23-ans.jpg",
+        notes: "Très rond, caramel, fruits secs, miel."
+      },
+      {
+        id: 46,
+        name: "Brugal 1888",
+        category: "Rhum",
+        type: "Rhum de mélasse",
+        distillery: "Brugal",
+        age: null,
+        country: "République dominicaine",
+        region: null,
+        abv: null,
+        flavourTags: ["boisé", "cacao", "épices"],
+        image: "https://drinks-and-style.ch/wp-content/uploads/2019/10/Brugal-1888-Rum.jpg",
+        notes: "Double maturation, notes de cacao, café, fruits secs."
+      },
+      {
+        id: 47,
+        name: "Breiz’île Caramel Vanille",
+        category: "Rhum",
+        type: "Punch au rhum",
+        distillery: "Breiz’île",
+        age: null,
+        country: "France",
+        region: "Bretagne",
+        abv: null,
+        flavourTags: ["doux", "caramel", "vanillé"],
+        image: "https://breiz-ile.fr/images/Image/Collection-2017-Caramel-Vanille-32.jpg",
+        notes: "Punch très sucré, dessert liquide caramel et vanille."
+      },
+      {
+        id: 48,
+        name: "Karukera L’Expression 45",
+        category: "Rhum",
+        type: "Rhum agricole",
+        distillery: "Karukera",
+        age: null,
+        country: "Guadeloupe",
+        region: null,
+        abv: null,
+        flavourTags: ["canne fraîche", "épices", "herbacé"],
+        image: "https://www.jardinvouvrillon.fr/5244-large_default/karukera-l-expression-45-45.jpg",
+        notes: "Agricole sec, canne fraîche, poivre, agrumes."
+      },
+      {
+        id: 49,
+        name: "Damoiseau 2007",
+        category: "Rhum",
+        type: "Rhum agricole millésimé",
+        distillery: "Damoiseau",
+        age: null,
+        country: "Guadeloupe",
+        region: null,
+        abv: null,
+        flavourTags: ["boisé", "épices", "fruité"],
+        image: "https://d1q9atv66skeoi.cloudfront.net/image/961033245606/image_jfko9p98qp1c31q5uk5tutk53h/-S1920x1920-FWEBP",
+        notes: "Millésime, chêne, fruits confits, épices."
+      },
+      {
+        id: 50,
+        name: "Damoiseau XO",
+        category: "Rhum",
+        type: "Rhum agricole",
+        distillery: "Damoiseau",
+        age: null,
+        country: "Guadeloupe",
+        region: null,
+        abv: null,
+        flavourTags: ["boisé", "vanillé", "épices douces"],
+        image: "https://drinkch.rokka.io/new-composition-600/o-dpr-2/383f59.jpg",
+        notes: "XO élégant, chêne, vanille, fruits secs."
+      },
+      {
+        id: 51,
+        name: "Depaz XO",
+        category: "Rhum",
+        type: "Rhum agricole",
+        distillery: "Depaz",
+        age: null,
+        country: "Martinique",
+        region: null,
+        abv: null,
+        flavourTags: ["canne", "boisé", "épices"],
+        image: "https://shop.rhumhouse.ch/shop/ProdukteBilder/1000_kl.png",
+        notes: "Agricole puissant, chêne, cacao, canne mûre."
+      },
+      {
+        id: 52,
+        name: "Depaz Porto Finish",
+        category: "Rhum",
+        type: "Rhum agricole",
+        distillery: "Depaz",
+        age: null,
+        country: "Martinique",
+        region: null,
+        abv: null,
+        flavourTags: ["fruité", "vin doux", "épices"],
+        image: "https://fatiofleurs.ch/cdn/shop/products/IMG_8687_2048x2048.jpg?v=1625648181",
+        notes: "Finish porto, fruits rouges, raisins secs, épices."
+      },
+      {
+        id: 53,
+        name: "Barbancourt 15 ans",
+        category: "Rhum",
+        type: "Rhum de canne",
+        distillery: "Barbancourt",
+        age: 15,
+        country: "Haïti",
+        region: null,
+        abv: null,
+        flavourTags: ["sec", "boisé", "épices"],
+        image: "https://rhumstore.com/wp-content/uploads/2022/09/rhumstore.Com-rhum-barbancourt-reserve-speciale-15-ans-haiti.jpg",
+        notes: "Style plus sec, chêne, cuir, épices."
+      },
+      {
+        id: 54,
+        name: "Chamarel VS",
+        category: "Rhum",
+        type: "Rhum de canne",
+        distillery: "Chamarel",
+        age: null,
+        country: "Île Maurice",
+        region: null,
+        abv: null,
+        flavourTags: ["canne", "fruité", "vanillé"],
+        image: "https://thedrinkshop.ch/2267-large_default/rhum-chamarel-vs.jpg",
+        notes: "Jeune mais aromatique, canne, fruits jaunes, vanille."
+      },
+      {
+        id: 55,
+        name: "New Grove Savoir Faire",
+        category: "Rhum",
+        type: "Rhum de mélasse",
+        distillery: "New Grove",
+        age: null,
+        country: "Île Maurice",
+        region: null,
+        abv: null,
+        flavourTags: ["vanillé", "fruité", "boisé"],
+        image: "https://d1q9atv66skeoi.cloudfront.net/image/961033245606/image_b7ktr933vp4u38n3jkeeagip47/-S1920x1920-FWEBP",
+        notes: "Finish fût de whisky, vanille, fruits, chêne."
+      },
+      {
+        id: 56,
+        name: "Saigon Baigur Dry Gin",
+        category: "Gin",
+        type: "Dry Gin",
+        distillery: "Saigon Baigur",
+        age: null,
+        country: "Vietnam",
+        region: null,
+        abv: null,
+        flavourTags: ["épicé", "botanique", "agrumes"],
+        image: "https://drinkch.rokka.io/new-composition-1200/o-dpr-2/93a8cc.jpg",
+        notes: "Gin vietnamien, botaniques exotiques, épices, agrumes."
+      },
+      {
+        id: 57,
+        name: "Malfy Gin Rosa",
+        category: "Gin",
+        type: "Gin aromatisé",
+        distillery: "Malfy",
+        age: null,
+        country: "Italie",
+        region: null,
+        abv: null,
+        flavourTags: ["pamplemousse", "fruité", "doux"],
+        image: "https://drinkch.rokka.io/new-composition-600/o-dpr-2/871a96.jpg",
+        notes: "Gin italien au pamplemousse rose, très fruité et frais."
+      },
+      {
+        id: 58,
+        name: "Tanqueray No. Ten",
+        category: "Gin",
+        type: "London Dry Gin",
+        distillery: "Tanqueray",
+        age: null,
+        country: "Royaume-Uni",
+        region: null,
+        abv: null,
+        flavourTags: ["agrumes", "genièvre", "sec"],
+        image: "https://www.aeliadutyfree.ch/media/catalog/product/5/0/5000281016689_1_885b.jpg?quality=80&bg-color=255,255,255&fit=bounds&height=934&width=934&canvas=934:934",
+        notes: "Gin premium, agrumes frais, genièvre, très net."
+      },
+      {
+        id: 59,
+        name: "Swiss OriGin GINUINE Strawberry",
+        category: "Gin",
+        type: "Gin aromatisé",
+        distillery: "GINUINE",
+        age: null,
+        country: "Suisse",
+        region: null,
+        abv: null,
+        flavourTags: ["fraise", "fruité", "doux"],
+        image: "https://www.pepillo.ch/wp-content/uploads/2019/11/ginuine_strawberry.jpg",
+        notes: "Gin suisse à la fraise, gourmand, parfait en cocktail."
+      },
+      {
+        id: 60,
+        name: "Walcher Amaretto Biologico",
+        category: "Amaretto",
+        type: "Liqueur d’amande",
+        distillery: "Walcher",
+        age: null,
+        country: "Italie",
+        region: null,
+        abv: null,
+        flavourTags: ["amande", "vanillé", "doux"],
+        image: "https://d1q9atv66skeoi.cloudfront.net/image/961033245606/image_knrpn4gv014o9emisduuvi7k1k/-S1920x1920-FWEBP",
+        notes: "Amaretto bio, amande douce, caramel, vanille."
+      },
+      {
+        id: 61,
+        name: "Sofia Amaretto Italiano",
+        category: "Amaretto",
+        type: "Liqueur d’amande",
+        distillery: "Sofia",
+        age: null,
+        country: "Italie",
+        region: null,
+        abv: null,
+        flavourTags: ["amande", "caramel", "doux"],
+        image: "https://public-storage.qoqa.ch/vltajqp27p7264277g2s25fjsplw",
+        notes: "Amaretto artisanal, très rond, notes d’amande grillée."
+      },
+      {
+        id: 62,
+        name: "Disaronno Originale",
+        category: "Amaretto",
+        type: "Liqueur d’amande",
+        distillery: "Disaronno",
+        age: null,
+        country: "Italie",
+        region: null,
+        abv: null,
+        flavourTags: ["amande", "vanillé", "doux"],
+        image: "https://matasci-vini.ch/cdn/shop/products/ALCOLICIAmarettoSaronno.jpg?v=1739261647&width=640",
+        notes: "Classique italien, amande marzipan, vanille, sucre brun."
+      },
+      {
+        id: 63,
+        name: "Berta DiMombaruzzo",
+        category: "Amaretto",
+        type: "Liqueur d’amande premium",
+        distillery: "Berta",
+        age: null,
+        country: "Italie",
+        region: "Piémont",
+        abv: null,
+        flavourTags: ["amande", "complexe", "doux"],
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAywqcR1KfTCgvHRFjphD3x1Kpm8bAFLIbXg&s",
+        notes: "Amaretto haut de gamme, très parfumé et complexe."
+      },
+      {
+        id: 64,
+        name: "Tequila 1800 Cristalino",
+        category: "Tequila",
+        type: "Añejo Cristalino",
+        distillery: "1800 Tequila",
+        age: null,
+        country: "Mexique",
+        region: "Jalisco",
+        abv: null,
+        flavourTags: ["agave", "vanillé", "doux"],
+        image: "https://d1q9atv66skeoi.cloudfront.net/image/961033245606/image_ahjm4u22514kla4qf97p19kf00/-S1920x1920-FWEBP",
+        notes: "Añejo filtré, agave mûr, vanille, coco léger."
+      }
+    ];
+
+    // === 2. Sélecteurs DOM ===
+    const searchInput   = document.getElementById("searchInput");
+    const categoryFilter = document.getElementById("categoryFilter");
+    const countryFilter = document.getElementById("countryFilter");
+    const sortSelect    = document.getElementById("sortSelect");
+    const flavourChips  = document.getElementById("flavourChips");
+    const grid          = document.getElementById("bottleGrid");
+    const countDisplay  = document.getElementById("countDisplay");
+
+    let activeFlavours = [];
+
+    // === 3. Initialisation des filtres ===
+    function initFilters() {
+      const categories = Array.from(new Set(bottles.map(b => b.category))).sort();
+      categories.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        categoryFilter.appendChild(opt);
+      });
+
+      const whiskyCountries = Array.from(
+        new Set(bottles.filter(b => b.category === "Whisky").map(b => b.country))
+      ).sort();
+
+      whiskyCountries.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = c;
+        countryFilter.appendChild(opt);
+      });
+
+      const flavourSet = new Set();
+      bottles.forEach(b => {
+        if (b.category === "Whisky" && Array.isArray(b.flavourTags)) {
+          b.flavourTags.forEach(tag => flavourSet.add(tag));
+        }
+      });
+
+      const flavours = Array.from(flavourSet).sort((a, b) => a.localeCompare(b, "fr"));
+
+      flavours.forEach(fl => {
+        const chip = document.createElement("button");
+        chip.className = "chip";
+        chip.textContent = fl;
+        chip.addEventListener("click", () => {
+          if (activeFlavours.includes(fl)) {
+            activeFlavours = activeFlavours.filter(f => f !== fl);
+          } else {
+            activeFlavours.push(fl);
+          }
+          updateFlavourChips();
+          render();
+        });
+        flavourChips.appendChild(chip);
+      });
+    }
+
+    function updateFlavourChips() {
+      const chips = flavourChips.querySelectorAll(".chip");
+      chips.forEach(chip => {
+        const value = chip.textContent;
+        if (activeFlavours.includes(value)) {
+          chip.classList.add("active");
+        } else {
+          chip.classList.remove("active");
+        }
+      });
+    }
+
+    // === 4. Rendu ===
+    function render() {
+      grid.innerHTML = "";
+
+      const search   = searchInput.value.toLowerCase().trim();
+      const category = categoryFilter.value;
+      const country  = countryFilter.value;
+      const sort     = sortSelect.value;
+      const hasFlavourFilter = activeFlavours.length > 0;
+
+      let filtered = bottles.filter(b => {
+        const text = [
+          b.name, b.category, b.type, b.distillery, b.country, b.region, b.notes
+        ].filter(Boolean).join(" ").toLowerCase();
+
+        const matchesSearch   = !search || text.includes(search);
+        const matchesCategory = !category || b.category === category;
+        const matchesCountry  =
+          !country || (b.category === "Whisky" && b.country === country);
+        const matchesFlavour  =
+          !hasFlavourFilter ||
+          (b.category === "Whisky" &&
+           Array.isArray(b.flavourTags) &&
+           b.flavourTags.some(tag => activeFlavours.includes(tag)));
+
+        return matchesSearch && matchesCategory && matchesCountry && matchesFlavour;
+      });
+
+      filtered.sort((a, b) => {
+        switch (sort) {
+          case "category":
+            return (a.category || "").localeCompare(b.category || "", "fr") ||
+                   (a.name || "").localeCompare(b.name || "", "fr");
+          case "country":
+            return (a.country || "").localeCompare(b.country || "", "fr") ||
+                   (a.name || "").localeCompare(b.name || "", "fr");
+          case "id":
+            return (a.id || 0) - (b.id || 0);
+          case "name":
+          default:
+            return (a.name || "").localeCompare(b.name || "", "fr");
+        }
+      });
+
+      countDisplay.textContent =
+        filtered.length === bottles.length
+          ? `${filtered.length} bouteille(s)`
+          : `${filtered.length} bouteille(s) filtrée(s) sur ${bottles.length}`;
+
+      filtered.forEach(b => {
+        const card = document.createElement("article");
+        card.className = "card";
+
+        const imageWrapper = document.createElement("div");
+        imageWrapper.className = "image-wrapper";
+        const img = document.createElement("img");
+
+        const label = encodeURIComponent(b.name || "Bouteille");
+        img.src = b.image || `https://via.placeholder.com/400x600.png?text=${label}`;
+        img.alt = b.name || "Bouteille";
+
+        img.onerror = () => {
+          img.src = `https://via.placeholder.com/400x600.png?text=${label}`;
+        };
+
+        imageWrapper.appendChild(img);
+
+        const header = document.createElement("div");
+        header.className = "card-header";
+
+        const title = document.createElement("div");
+        title.className = "card-title";
+        title.textContent = b.name || "Sans nom";
+
+        const tag = document.createElement("div");
+        tag.className = "tag";
+        tag.textContent = b.category || "Alcool";
+
+        header.appendChild(title);
+        header.appendChild(tag);
+
+        const lineType = document.createElement("div");
+        lineType.className = "line";
+        lineType.textContent = [b.type, b.distillery].filter(Boolean).join(" • ");
+
+        const lineRegion = document.createElement("div");
+        lineRegion.className = "line muted";
+        const agePart    = b.age ? `${b.age} ans` : null;
+        const regionPart =
+          b.country && b.region ? `${b.country} • ${b.region}` : b.country || b.region || null;
+        lineRegion.textContent = [agePart, regionPart].filter(Boolean).join(" • ");
+
+        const lineNotes = document.createElement("div");
+        lineNotes.className = "line";
+        lineNotes.textContent = b.notes || "";
+
+        const badgeLine = document.createElement("div");
+        badgeLine.className = "badge-line";
+
+        const badgeId = document.createElement("span");
+        badgeId.className = "badge";
+        badgeId.textContent = `#${b.id}`;
+        badgeLine.appendChild(badgeId);
+
+        if (b.abv) {
+          const badgeAbv = document.createElement("span");
+          badgeAbv.className = "badge";
+          badgeAbv.textContent = `${b.abv}% vol`;
+          badgeLine.appendChild(badgeAbv);
+        }
+
+        if (b.country && b.category === "Whisky") {
+          const badgeCountry = document.createElement("span");
+          badgeCountry.className = "badge";
+          badgeCountry.textContent = b.country;
+          badgeLine.appendChild(badgeCountry);
+        }
+
+        const flavourBadges = document.createElement("div");
+        flavourBadges.className = "flavour-badges";
+        if (Array.isArray(b.flavourTags)) {
+          b.flavourTags.forEach(tagText => {
+            const badge = document.createElement("span");
+            badge.className = "badge";
+            badge.textContent = tagText;
+            flavourBadges.appendChild(badge);
+          });
+        }
+
+        card.appendChild(imageWrapper);
+        card.appendChild(header);
+        if (lineType.textContent) card.appendChild(lineType);
+        if (lineRegion.textContent) card.appendChild(lineRegion);
+        if (lineNotes.textContent) card.appendChild(lineNotes);
+        card.appendChild(badgeLine);
+        if (flavourBadges.childElementCount > 0) {
+          card.appendChild(flavourBadges);
+        }
+
+        grid.appendChild(card);
+      });
+    }
+
+    // === 5. Événements ===
+    searchInput.addEventListener("input", render);
+    categoryFilter.addEventListener("change", render);
+    countryFilter.addEventListener("change", render);
+    sortSelect.addEventListener("change", render);
+
+    // Initialisation
+    initFilters();
+    render();
+  </script>
+</body>
+</html>
