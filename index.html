@@ -1127,7 +1127,7 @@
       }
     ];
 
-       // === 2. Sélecteurs DOM ===
+          // === 2. Sélecteurs DOM ===
     const searchInput   = document.getElementById("searchInput");
     const categoryFilter = document.getElementById("categoryFilter");
     const countryFilter = document.getElementById("countryFilter");
@@ -1151,48 +1151,11 @@
         categoryFilter.appendChild(opt);
       });
 
-      // 3.2 Pays : on initialise une première fois,
-      // puis on recalculera dynamiquement quand la catégorie change
+      // 3.2 Pays (toutes catégories, mais dépend de la sélection)
       updateCountryOptions();
 
-      // 3.3 Puces des goûts (flavours) pour les whiskies
-      const flavourSet = new Set();
-      bottles.forEach(b => {
-        if (b.category === "Whisky" && Array.isArray(b.flavourTags)) {
-          b.flavourTags.forEach(tag => flavourSet.add(tag));
-        }
-      });
-
-      const flavours = Array.from(flavourSet).sort((a, b) => a.localeCompare(b, "fr"));
-
-      flavours.forEach(fl => {
-        const chip = document.createElement("button");
-        chip.className = "chip";
-        chip.textContent = fl;
-        chip.addEventListener("click", () => {
-          if (activeFlavours.includes(fl)) {
-            activeFlavours = activeFlavours.filter(f => f !== fl);
-          } else {
-            activeFlavours.push(fl);
-          }
-          updateFlavourChips();
-          render();
-        });
-        flavourChips.appendChild(chip);
-      });
-    }
-
-    // Met à jour visuellement les chips de goûts (actives/inactives)
-    function updateFlavourChips() {
-      const chips = flavourChips.querySelectorAll(".chip");
-      chips.forEach(chip => {
-        const value = chip.textContent;
-        if (activeFlavours.includes(value)) {
-          chip.classList.add("active");
-        } else {
-          chip.classList.remove("active");
-        }
-      });
+      // 3.3 Goûts (toutes catégories, mais dépend de la sélection)
+      updateFlavourOptions();
     }
 
     // === 3.bis. Mise à jour dynamique des pays en fonction de la catégorie ===
@@ -1200,8 +1163,6 @@
       const currentCategory = categoryFilter.value;
       const previousCountry = countryFilter.value;
 
-      // On ne regarde que les bouteilles de la catégorie sélectionnée
-      // ou toutes si aucune catégorie choisie
       let relevant = bottles;
       if (currentCategory) {
         relevant = bottles.filter(b => b.category === currentCategory);
@@ -1214,7 +1175,6 @@
 
       const countries = Array.from(countrySet).sort((a, b) => a.localeCompare(b, "fr"));
 
-      // On reconstruit entièrement le <select> des pays
       countryFilter.innerHTML = "";
       const optAll = document.createElement("option");
       optAll.value = "";
@@ -1230,12 +1190,71 @@
         countryFilter.appendChild(opt);
       });
 
-      // Si l'ancien pays sélectionné existe encore dans la nouvelle liste, on le garde
       if (previousCountry && countries.includes(previousCountry)) {
         countryFilter.value = previousCountry;
       } else {
         countryFilter.value = "";
       }
+    }
+
+    // === 3.ter. Mise à jour dynamique des goûts en fonction de la catégorie ===
+    function updateFlavourOptions() {
+      const currentCategory = categoryFilter.value;
+
+      let relevant = bottles;
+      if (currentCategory) {
+        relevant = bottles.filter(b => b.category === currentCategory);
+      }
+
+      const flavourSet = new Set();
+      relevant.forEach(b => {
+        if (Array.isArray(b.flavourTags)) {
+          b.flavourTags.forEach(tag => flavourSet.add(tag));
+        }
+      });
+
+      const allFlavours = Array.from(flavourSet).sort((a, b) => a.localeCompare(b, "fr"));
+
+      // On garde uniquement les goûts encore présents
+      activeFlavours = activeFlavours.filter(f => allFlavours.includes(f));
+
+      // On reconstruit les chips
+      flavourChips.innerHTML = "";
+      allFlavours.forEach(fl => {
+        const chip = document.createElement("button");
+        chip.className = "chip";
+        chip.textContent = fl;
+
+        if (activeFlavours.includes(fl)) {
+          chip.classList.add("active");
+        }
+
+        chip.addEventListener("click", () => {
+          if (activeFlavours.includes(fl)) {
+            activeFlavours = activeFlavours.filter(f => f !== fl);
+          } else {
+            activeFlavours.push(fl);
+          }
+          updateFlavourChipsVisual();
+          render();
+        });
+
+        flavourChips.appendChild(chip);
+      });
+
+      updateFlavourChipsVisual();
+    }
+
+    function updateFlavourChipsVisual() {
+      const chips = flavourChips.querySelectorAll(".chip");
+      chips.forEach(chip => {
+        const value = chip.textContent;
+        if (activeFlavours.includes(value)) {
+          chip.classList.add("active");
+        } else {
+          chip.classList.remove("active");
+        }
+      });
     }
 
     // === 4. Rendu ===
@@ -1256,19 +1275,18 @@
         const matchesSearch   = !search || text.includes(search);
         const matchesCategory = !category || b.category === category;
 
-        // 🔥 Ici : le pays s'applique à TOUTES les catégories, plus seulement au whisky
+        // Pays : s'applique à toutes les catégories
         const matchesCountry  = !country || b.country === country;
 
+        // Goûts : maintenant pour tous les alcools qui ont flavourTags
         const matchesFlavour  =
           !hasFlavourFilter ||
-          (b.category === "Whisky" &&
-           Array.isArray(b.flavourTags) &&
+          (Array.isArray(b.flavourTags) &&
            b.flavourTags.some(tag => activeFlavours.includes(tag)));
 
         return matchesSearch && matchesCategory && matchesCountry && matchesFlavour;
       });
 
-      // Tri
       filtered.sort((a, b) => {
         switch (sort) {
           case "category":
@@ -1290,7 +1308,6 @@
           ? `${filtered.length} bouteille(s)`
           : `${filtered.length} bouteille(s) filtrée(s) sur ${bottles.length}`;
 
-      // Affichage des cartes
       filtered.forEach(b => {
         const card = document.createElement("article");
         card.className = "card";
@@ -1388,8 +1405,9 @@
     // === 5. Événements ===
     searchInput.addEventListener("input", render);
     categoryFilter.addEventListener("change", () => {
-      // Quand on change de type d'alcool → on met les pays à jour
+      // Quand on change de type d'alcool → pays & goûts se mettent à jour
       updateCountryOptions();
+      updateFlavourOptions();
       render();
     });
     countryFilter.addEventListener("change", render);
@@ -1402,5 +1420,6 @@
   </script>
 </body>
 </html>
+
 
 
