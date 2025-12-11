@@ -1127,7 +1127,7 @@
       }
     ];
 
-    // === 2. Sélecteurs DOM ===
+       // === 2. Sélecteurs DOM ===
     const searchInput   = document.getElementById("searchInput");
     const categoryFilter = document.getElementById("categoryFilter");
     const countryFilter = document.getElementById("countryFilter");
@@ -1140,7 +1140,10 @@
 
     // === 3. Initialisation des filtres ===
     function initFilters() {
-      const categories = Array.from(new Set(bottles.map(b => b.category))).sort();
+      // 3.1 Catégories (Whisky, Rhum, Gin, etc.)
+      const categories = Array.from(new Set(bottles.map(b => b.category))).sort((a, b) =>
+        a.localeCompare(b, "fr")
+      );
       categories.forEach(cat => {
         const opt = document.createElement("option");
         opt.value = cat;
@@ -1148,17 +1151,11 @@
         categoryFilter.appendChild(opt);
       });
 
-      const whiskyCountries = Array.from(
-        new Set(bottles.filter(b => b.category === "Whisky").map(b => b.country))
-      ).sort();
+      // 3.2 Pays : on initialise une première fois,
+      // puis on recalculera dynamiquement quand la catégorie change
+      updateCountryOptions();
 
-      whiskyCountries.forEach(c => {
-        const opt = document.createElement("option");
-        opt.value = c;
-        opt.textContent = c;
-        countryFilter.appendChild(opt);
-      });
-
+      // 3.3 Puces des goûts (flavours) pour les whiskies
       const flavourSet = new Set();
       bottles.forEach(b => {
         if (b.category === "Whisky" && Array.isArray(b.flavourTags)) {
@@ -1185,6 +1182,7 @@
       });
     }
 
+    // Met à jour visuellement les chips de goûts (actives/inactives)
     function updateFlavourChips() {
       const chips = flavourChips.querySelectorAll(".chip");
       chips.forEach(chip => {
@@ -1195,6 +1193,49 @@
           chip.classList.remove("active");
         }
       });
+    }
+
+    // === 3.bis. Mise à jour dynamique des pays en fonction de la catégorie ===
+    function updateCountryOptions() {
+      const currentCategory = categoryFilter.value;
+      const previousCountry = countryFilter.value;
+
+      // On ne regarde que les bouteilles de la catégorie sélectionnée
+      // ou toutes si aucune catégorie choisie
+      let relevant = bottles;
+      if (currentCategory) {
+        relevant = bottles.filter(b => b.category === currentCategory);
+      }
+
+      const countrySet = new Set();
+      relevant.forEach(b => {
+        if (b.country) countrySet.add(b.country);
+      });
+
+      const countries = Array.from(countrySet).sort((a, b) => a.localeCompare(b, "fr"));
+
+      // On reconstruit entièrement le <select> des pays
+      countryFilter.innerHTML = "";
+      const optAll = document.createElement("option");
+      optAll.value = "";
+      optAll.textContent = currentCategory
+        ? `Tous les pays (${currentCategory.toLowerCase()})`
+        : "Tous les pays";
+      countryFilter.appendChild(optAll);
+
+      countries.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = c;
+        countryFilter.appendChild(opt);
+      });
+
+      // Si l'ancien pays sélectionné existe encore dans la nouvelle liste, on le garde
+      if (previousCountry && countries.includes(previousCountry)) {
+        countryFilter.value = previousCountry;
+      } else {
+        countryFilter.value = "";
+      }
     }
 
     // === 4. Rendu ===
@@ -1214,8 +1255,10 @@
 
         const matchesSearch   = !search || text.includes(search);
         const matchesCategory = !category || b.category === category;
-        const matchesCountry  =
-          !country || (b.category === "Whisky" && b.country === country);
+
+        // 🔥 Ici : le pays s'applique à TOUTES les catégories, plus seulement au whisky
+        const matchesCountry  = !country || b.country === country;
+
         const matchesFlavour  =
           !hasFlavourFilter ||
           (b.category === "Whisky" &&
@@ -1225,6 +1268,7 @@
         return matchesSearch && matchesCategory && matchesCountry && matchesFlavour;
       });
 
+      // Tri
       filtered.sort((a, b) => {
         switch (sort) {
           case "category":
@@ -1246,6 +1290,7 @@
           ? `${filtered.length} bouteille(s)`
           : `${filtered.length} bouteille(s) filtrée(s) sur ${bottles.length}`;
 
+      // Affichage des cartes
       filtered.forEach(b => {
         const card = document.createElement("article");
         card.className = "card";
@@ -1308,7 +1353,7 @@
           badgeLine.appendChild(badgeAbv);
         }
 
-        if (b.country && b.category === "Whisky") {
+        if (b.country) {
           const badgeCountry = document.createElement("span");
           badgeCountry.className = "badge";
           badgeCountry.textContent = b.country;
@@ -1342,14 +1387,20 @@
 
     // === 5. Événements ===
     searchInput.addEventListener("input", render);
-    categoryFilter.addEventListener("change", render);
+    categoryFilter.addEventListener("change", () => {
+      // Quand on change de type d'alcool → on met les pays à jour
+      updateCountryOptions();
+      render();
+    });
     countryFilter.addEventListener("change", render);
     sortSelect.addEventListener("change", render);
 
     // Initialisation
     initFilters();
     render();
+
   </script>
 </body>
 </html>
+
 
